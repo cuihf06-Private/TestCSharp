@@ -19,9 +19,9 @@ namespace WindowSnake;
 internal sealed class MainForm : Form
 {
     // ---- 棋盘几何参数(DIP,WinForms 自动按 DPI 缩放) ----
-    private const int CellSize = 32;     // 每格 DIP,决定窗口整体大小
-    private const int HudHeight = 60;    // 顶部 HUD 区高
-    private const int BoardMargin = 12;  // 棋盘外边距(避免与基类 Form.Margin 同名)
+    private const int CellSize = 32;       // 每格 DIP,决定窗口整体大小
+    private const int HudHeight = 124;     // 顶部 HUD 区高(三行文字 + 上下 padding,留够余量)
+    private const int BoardMargin = 16;    // 棋盘外边距(避免与基类 Form.Margin 同名)
 
     // ---- 棋盘逻辑尺寸 / 难度参数 ----
     private const int BoardW = 25;
@@ -154,10 +154,19 @@ internal sealed class MainForm : Form
         using var linePen = new Pen(Color.FromArgb(60, 60, 70));
         g.DrawLine(linePen, 0, HudHeight, ClientSize.Width, HudHeight);
 
-        using var titleFont = new Font("Segoe UI", 13f, FontStyle.Bold, GraphicsUnit.Point);
-        using var infoFont  = new Font("Segoe UI", 10f, FontStyle.Regular, GraphicsUnit.Point);
+        // 字体集中创建一次。注意:中文在不同 DPI / 系统字体替代下,行高可能比经验值大很多,
+        // 所以下面每行都用 MeasureString 取真实高度后再累加 y,避免重叠。
+        using var titleFont = new Font("Microsoft YaHei UI", 12f, FontStyle.Bold, GraphicsUnit.Point);
+        using var infoFont  = new Font("Microsoft YaHei UI", 10f, FontStyle.Regular, GraphicsUnit.Point);
+        using var hintFont  = new Font("Microsoft YaHei UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
 
-        // 状态文字
+        const float topPad = 12f;   // 第一行顶部留白
+        const float lineGap = 8f;   // 行间最小间距(实测行高不够时再补)
+
+        float x = BoardMargin;
+        float y = topPad;
+
+        // 第 1 行:状态
         string stateText = _game.Status switch
         {
             GameStatus.Running  => "游戏中",
@@ -174,17 +183,24 @@ internal sealed class MainForm : Form
             GameStatus.Win      => WinBrush,
             _ => TextBrush,
         };
-        g.DrawString($"状态: {stateText}", titleFont, stateBrush, BoardMargin, 8);
+        string stateLine = $"状态:{stateText}";
+        var stateSize = g.MeasureString(stateLine, titleFont);
+        g.DrawString(stateLine, titleFont, stateBrush, x, y);
+        y += stateSize.Height + lineGap;
 
-        // 分数 / 长度 / 速度
+        // 第 2 行:分数 / 长度 / 速度
         double stepsPerSec = 1000.0 / _game.StepIntervalMs;
-        string info = $"分数: {_game.Score,5}    长度: {_game.Length,3}    速度: {stepsPerSec,5:F1} 步/秒";
-        g.DrawString(info, infoFont, TextBrush, BoardMargin, 34);
+        string info = $"分数:{_game.Score,5}    长度:{_game.Length,3}    速度:{stepsPerSec,5:F1} 步/秒";
+        var infoSize = g.MeasureString(info, infoFont);
+        g.DrawString(info, infoFont, TextBrush, x, y);
+        y += infoSize.Height + lineGap;
 
-        // 操作提示放右侧
-        string hint = "方向键/WASD 移动   空格 暂停   R 重开   Esc 退出";
-        var hintSize = g.MeasureString(hint, infoFont);
-        g.DrawString(hint, infoFont, DimTextBrush, ClientSize.Width - hintSize.Width - BoardMargin, 34);
+        // 第 3 行:操作提示
+        const string hint = "WASD / 方向键 移动    空格 暂停    R 重开    Esc 退出";
+        var hintSize = g.MeasureString(hint, hintFont);
+        g.DrawString(hint, hintFont, DimTextBrush, x, y);
+        // 注释:此处不再累加,本函数不依赖 HudHeight 反推布局;
+        // 如果想验证 HUD 实际占用未越界,可在此比较 (y + hintSize.Height) 与 HudHeight。
     }
 
     private void DrawBoard(Graphics g)
@@ -260,25 +276,25 @@ internal sealed class MainForm : Form
             CellSize * _game.BoardHeight);
         g.FillRectangle(OverlayBrush, boardRect);
 
-        using var bigFont   = new Font("Segoe UI", 28f, FontStyle.Bold, GraphicsUnit.Point);
-        using var smallFont = new Font("Segoe UI", 12f, FontStyle.Regular, GraphicsUnit.Point);
+        using var bigFont   = new Font("Microsoft YaHei UI", 32f, FontStyle.Bold, GraphicsUnit.Point);
+        using var smallFont = new Font("Microsoft YaHei UI", 12f, FontStyle.Regular, GraphicsUnit.Point);
 
         string title, sub;
         Brush titleBrush = TextBrush;
         switch (_game.Status)
         {
             case GameStatus.Paused:
-                title = "已暂停";
-                sub = "按 空格 继续";
+                title = "已 暂 停";
+                sub = "按 [空格] 继续   ·   按 [R] 重开   ·   按 [Esc] 退出";
                 break;
             case GameStatus.GameOver:
-                title = "游戏结束";
-                sub = $"最终得分: {_game.Score}    按 R 重新开始,按 Esc 退出";
+                title = "游 戏 结 束";
+                sub = $"最终得分:{_game.Score}    长度:{_game.Length}    按 [R] 重新开始";
                 break;
             case GameStatus.Win:
-                title = "胜利!";
+                title = "胜  利";
                 titleBrush = WinBrush;
-                sub = $"你吃满了整张地图!  长度: {_game.Length}  得分: {_game.Score}    按 R 再来一局";
+                sub = $"你吃满了整张地图!    长度:{_game.Length}    得分:{_game.Score}    按 [R] 再来一局";
                 break;
             default:
                 return;
@@ -286,10 +302,12 @@ internal sealed class MainForm : Form
 
         var titleSize = g.MeasureString(title, bigFont);
         var subSize   = g.MeasureString(sub,   smallFont);
+        // 总高度 = 标题 + 间距 24 + 副标题,整体在棋盘内垂直居中
+        float totalH = titleSize.Height + 24 + subSize.Height;
+        float ty = boardRect.Y + (boardRect.Height - totalH) / 2f;
+        float sy = ty + titleSize.Height + 24;
         float tx = boardRect.X + (boardRect.Width  - titleSize.Width)  / 2f;
-        float ty = boardRect.Y + (boardRect.Height - titleSize.Height) / 2f - 18;
         float sx = boardRect.X + (boardRect.Width  - subSize.Width)    / 2f;
-        float sy = ty + titleSize.Height + 12;
         g.DrawString(title, bigFont,   titleBrush, tx, ty);
         g.DrawString(sub,   smallFont, DimTextBrush, sx, sy);
     }
