@@ -1,0 +1,14 @@
+d:\Projects\TestCSharp\WindowSnake\bin\Release\net8.0-windows\WindowSnake.exe
+d:\Projects\TestCSharp\WindowSnake\bin\Release\net8.0-windows\WindowSnake.deps.json
+d:\Projects\TestCSharp\WindowSnake\bin\Release\net8.0-windows\WindowSnake.runtimeconfig.json
+d:\Projects\TestCSharp\WindowSnake\bin\Release\net8.0-windows\WindowSnake.dll
+d:\Projects\TestCSharp\WindowSnake\bin\Release\net8.0-windows\WindowSnake.pdb
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\WindowSnake.GeneratedMSBuildEditorConfig.editorconfig
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\WindowSnake.AssemblyInfoInputs.cache
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\WindowSnake.AssemblyInfo.cs
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\WindowSnake.csproj.CoreCompileInputs.cache
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\WindowSnake.dll
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\refint\WindowSnake.dll
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\WindowSnake.pdb
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\WindowSnake.genruntimeconfig.cache
+d:\Projects\TestCSharp\WindowSnake\obj\Release\net8.0-windows\ref\WindowSnake.dll

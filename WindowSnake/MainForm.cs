@@ -19,9 +19,9 @@ namespace WindowSnake;
 internal sealed class MainForm : Form
 {
     // ---- 棋盘几何参数(DIP,WinForms 自动按 DPI 缩放) ----
-    private const int CellSize = 24;     // 每格像素
+    private const int CellSize = 32;     // 每格 DIP,决定窗口整体大小
     private const int HudHeight = 60;    // 顶部 HUD 区高
-    private const int Margin    = 12;    // 棋盘外边距
+    private const int BoardMargin = 12;  // 棋盘外边距(避免与基类 Form.Margin 同名)
 
     // ---- 棋盘逻辑尺寸 / 难度参数 ----
     private const int BoardW = 25;
@@ -61,17 +61,20 @@ internal sealed class MainForm : Form
             true);
         BackColor = Color.FromArgb(18, 18, 22);
         Text = "贪食蛇 (WindowSnake)";
-        FormBorderStyle = FormBorderStyle.FixedSingle;
+        FormBorderStyle = FormBorderStyle.FixedDialog; // 固定大小,游戏窗口保持正方格
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         KeyPreview = true;
 
-        // 锁定窗口大小,避免拉伸破坏方格比例
-        int clientW = Margin * 2 + CellSize * BoardW;
-        int clientH = Margin + HudHeight + CellSize * BoardH + Margin;
+        // 设置客户区大小。WinForms 会自动算出 Form.Size = ClientSize + 标题栏 + 边框。
+        // 注意:不要再额外设 MinimumSize / MaximumSize。
+        // 之前就是在这里用 clientW+16 / clientH+38 硬编码估算的边界值,在 100% DPI 下还能凑合,
+        // 一旦 DPI 缩放大于 100%(150% / 200% 等),WinForms 算出的实际 Form.Size 就会超过
+        // MaximumSize,从而把 ClientSize 反向压缩,棋盘就会被切掉一截。
+        // 用 FixedDialog 锁死不能调整大小,这里只设 ClientSize 就够了。
+        int clientW = BoardMargin * 2 + CellSize * BoardW;
+        int clientH = BoardMargin + HudHeight + CellSize * BoardH + BoardMargin;
         ClientSize = new Size(clientW, clientH);
-        MinimumSize = new Size(clientW + 16, clientH + 38); // 包含标题栏/边框占位
-        MaximumSize = MinimumSize;
 
         // 核心游戏逻辑
         _game = new GameLogic(BoardW, BoardH, InitialSpeedMs, MinSpeedMs, SpeedUpEvery);
@@ -171,23 +174,23 @@ internal sealed class MainForm : Form
             GameStatus.Win      => WinBrush,
             _ => TextBrush,
         };
-        g.DrawString($"状态: {stateText}", titleFont, stateBrush, Margin, 8);
+        g.DrawString($"状态: {stateText}", titleFont, stateBrush, BoardMargin, 8);
 
         // 分数 / 长度 / 速度
         double stepsPerSec = 1000.0 / _game.StepIntervalMs;
         string info = $"分数: {_game.Score,5}    长度: {_game.Length,3}    速度: {stepsPerSec,5:F1} 步/秒";
-        g.DrawString(info, infoFont, TextBrush, Margin, 34);
+        g.DrawString(info, infoFont, TextBrush, BoardMargin, 34);
 
         // 操作提示放右侧
         string hint = "方向键/WASD 移动   空格 暂停   R 重开   Esc 退出";
         var hintSize = g.MeasureString(hint, infoFont);
-        g.DrawString(hint, infoFont, DimTextBrush, ClientSize.Width - hintSize.Width - Margin, 34);
+        g.DrawString(hint, infoFont, DimTextBrush, ClientSize.Width - hintSize.Width - BoardMargin, 34);
     }
 
     private void DrawBoard(Graphics g)
     {
-        int ox = Margin;
-        int oy = HudHeight + Margin;
+        int ox = BoardMargin;
+        int oy = HudHeight + BoardMargin;
         int boardPixelW = CellSize * _game.BoardWidth;
         int boardPixelH = CellSize * _game.BoardHeight;
 
@@ -251,8 +254,8 @@ internal sealed class MainForm : Form
         if (_game.Status == GameStatus.Running) return;
 
         var boardRect = new Rectangle(
-            Margin,
-            HudHeight + Margin,
+            BoardMargin,
+            HudHeight + BoardMargin,
             CellSize * _game.BoardWidth,
             CellSize * _game.BoardHeight);
         g.FillRectangle(OverlayBrush, boardRect);

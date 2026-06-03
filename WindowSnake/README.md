@@ -227,7 +227,7 @@ dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile
 2. **`StateChanged` 事件**:游戏内任何状态变化(步进、暂停、结束、胜利、重置)都会触发,UI 收到后调用 `Invalidate()` 重绘。
 3. **`ProcessCmdKey` 而非 `OnKeyDown`**:在命令键分发到控件前拦截,即便以后在窗口里放按钮也能正确处理方向键。
 4. **双缓冲 + 全量重绘**:棋盘 25×20 = 500 格,性能毫无压力,代码更简单。改用脏矩形优化也是一两行的事。
-5. **DPI**:通过 `app.manifest` 声明 PerMonitorV2,WinForms 会自动把 24 DIP 缩放到当前 DPI 对应的物理像素。
+5. **DPI**:通过 `app.manifest` 声明 PerMonitorV2,WinForms 会自动把 32 DIP 缩放到当前 DPI 对应的物理像素。
 6. **常量集中在 `MainForm` 顶部**:调参只需改 `BoardW` / `BoardH` / `InitialSpeedMs` 等。
 
 ---
@@ -238,7 +238,7 @@ dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile
 
 | 常量 | 默认值 | 含义 |
 |---|---|---|
-| `CellSize` | `24` | 每格 DIP 像素大小,改大就是"大屏版" |
+| `CellSize` | `32` | 每格 DIP 像素大小,改大就是"大屏版" |
 | `HudHeight` | `60` | 顶部 HUD 区高度 |
 | `Margin` | `12` | 棋盘外边距 |
 | `BoardW` | `25` | 棋盘逻辑宽度(含墙) |
