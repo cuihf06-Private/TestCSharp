@@ -13,6 +13,7 @@ internal enum Direction
 
 internal enum GameStatus
 {
+    Waiting,
     Running,
     Paused,
     GameOver,
@@ -100,7 +101,7 @@ internal sealed class GameLogic
         _stepIntervalMs = InitialSpeedMs;
         _direction = Direction.Right;
         _nextDirection = Direction.Right;
-        _status = GameStatus.Running;
+        _status = GameStatus.Waiting;
 
         // 蛇初始 3 节,水平居中,头朝右
         int cx = BoardWidth / 2;
@@ -114,6 +115,16 @@ internal sealed class GameLogic
 
         SpawnFood();
         RaiseStateChanged();
+    }
+
+    /// <summary>从 Waiting 状态开始游戏。</summary>
+    public void StartGame()
+    {
+        if (_status == GameStatus.Waiting)
+        {
+            _status = GameStatus.Running;
+            RaiseStateChanged();
+        }
     }
 
     /// <summary>主循环步进一次。游戏处于 Paused/GameOver/Win 时为 no-op。</summary>

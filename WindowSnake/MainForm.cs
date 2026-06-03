@@ -13,14 +13,16 @@ namespace WindowSnake;
 ///   - 在 <see cref="ProcessCmdKey"/> 中拦截键盘输入
 ///
 /// 渲染策略:
-///   - 双缓冲全量重绘。棋盘只有 25*20 = 500 格,完全够用
-///   - HUD 区在顶部,棋盘在下方,GameOver/Paused 时在棋盘上覆盖半透明遮罩 + 文字
+///   - 双缓冲全量重绘
+///   - HUD 区在顶部,棋盘在下方,GameOver/Paused/Waiting 时在棋盘上覆盖半透明遮罩 + 文字
+///   - 窗口可自由缩放,CellSize 根据窗口大小动态计算
 /// </summary>
 internal sealed class MainForm : Form
 {
     // ---- 棋盘几何参数(DIP,WinForms 自动按 DPI 缩放) ----
-    private const int CellSize = 32;       // 每格 DIP,决定窗口整体大小
     private const int BoardMargin = 16;    // 棋盘外边距
+    private const int MinCellSize = 16;    // 最小单元格大小
+    private const int MaxCellSize = 48;    // 最大单元格大小
 
     // ---- 棋盘逻辑尺寸 / 难度参数 ----
     private const int BoardW = 25;
@@ -37,7 +39,10 @@ internal sealed class MainForm : Form
     // 动态计算的 HUD 高度
     private int _hudHeight;
 
-    private readonly GameLogic _game;
+    // 菜单
+    private MenuStrip? _menuStrip;
+
+    private GameLogic _game; // 非 readonly，因为需要切换地图尺寸时重新创建
     private readonly System.Windows.Forms.Timer _timer = new();
 
     // 预创建常用画笔/画刷,避免 OnPaint 中反复 new
@@ -62,27 +67,35 @@ internal sealed class MainForm : Form
         DoubleBuffered = true;
         BackColor = Color.FromArgb(18, 18, 22);
         Text = "贪食蛇 (WindowSnake)";
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterScreen;
         KeyPreview = true;
+
+        // 设置最小窗口大小
+        MinimumSize = new Size(400, 300);
+
+        // 创建菜单
+        CreateMenu();
 
         // 计算 HUD 实际高度
         CalculateHudHeight();
 
-        // 设置客户区大小
-        int clientW = BoardMargin * 2 + CellSize * BoardW;
-        int clientH = BoardMargin + _hudHeight + CellSize * BoardH + BoardMargin;
+        // 设置初始客户区大小
+        int initialCellSize = 32;
+        int clientW = BoardMargin * 2 + initialCellSize * BoardW;
+        int clientH = BoardMargin + _hudHeight + initialCellSize * BoardH + BoardMargin;
         ClientSize = new Size(clientW, clientH);
 
         // 核心游戏逻辑
         _game = new GameLogic(BoardW, BoardH, InitialSpeedMs, MinSpeedMs, SpeedUpEvery);
         _game.StateChanged += (_, _) => Invalidate();
 
-        // 计时器
+        // 计时器（初始不启动，等待用户按键）
         _timer.Interval = _game.StepIntervalMs;
         _timer.Tick += GameTimer_Tick;
-        _timer.Start();
+
+        // 窗口大小改变时重绘
+        Resize += (_, _) => Invalidate();
 
         // 释放计时器
         FormClosed += (_, _) => _timer.Dispose();
@@ -101,6 +114,16 @@ internal sealed class MainForm : Form
     /// </summary>
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
+        // 处理开始游戏
+        bool isDirectionKey = keyData is Keys.Up or Keys.Down or Keys.Left or Keys.Right
+            or Keys.W or Keys.S or Keys.A or Keys.D;
+        
+        if ((isDirectionKey || keyData == Keys.Space) && _game.Status == GameStatus.Waiting)
+        {
+            _game.StartGame();
+            _timer.Start();
+        }
+
         switch (keyData)
         {
             case Keys.Up:    _game.TrySetDirection(Direction.Up);    return true;
@@ -119,7 +142,7 @@ internal sealed class MainForm : Form
                 if (_game.Status is GameStatus.GameOver or GameStatus.Win)
                 {
                     _game.Reset();
-                    _timer.Interval = _game.StepIntervalMs;
+                    _timer.Stop(); // 重置后停止计时器，等待重新开始
                 }
                 return true;
             case Keys.Escape:
@@ -183,9 +206,9 @@ internal sealed class MainForm : Form
         g.DrawString(stateLine, titleFont, stateBrush, x, y);
         y += stateSize.Height + HudLineGap;
 
-        // 第 2 行:分数 / 长度 / 速度
+        // 第 2 行:分数 / 长度 / 速度 / 地图
         double stepsPerSec = 1000.0 / _game.StepIntervalMs;
-        string info = $"分数:{_game.Score,5}    长度:{_game.Length,3}    速度:{stepsPerSec,5:F1} 步/秒";
+        string info = $"分数:{_game.Score,5}    长度:{_game.Length,3}    速度:{stepsPerSec,5:F1} 步/秒    地图:{_game.BoardWidth}x{_game.BoardHeight}";
         var infoSize = g.MeasureString(info, infoFont);
         g.DrawString(info, infoFont, TextBrush, x, y);
         y += infoSize.Height + HudLineGap;
@@ -198,10 +221,14 @@ internal sealed class MainForm : Form
 
     private void DrawBoard(Graphics g)
     {
-        int ox = BoardMargin;
-        int oy = _hudHeight + BoardMargin;
-        int boardPixelW = CellSize * _game.BoardWidth;
-        int boardPixelH = CellSize * _game.BoardHeight;
+        // 动态计算单元格大小
+        int cellSize = CalculateCellSize();
+
+        // 居中计算
+        int boardPixelW = cellSize * _game.BoardWidth;
+        int boardPixelH = cellSize * _game.BoardHeight;
+        int ox = BoardMargin + (ClientSize.Width - BoardMargin * 2 - boardPixelW) / 2;
+        int oy = _hudHeight + BoardMargin + (ClientSize.Height - _hudHeight - BoardMargin * 2 - boardPixelH) / 2;
 
         // 棋盘底色
         g.FillRectangle(BoardBrush, ox, oy, boardPixelW, boardPixelH);
@@ -210,14 +237,14 @@ internal sealed class MainForm : Form
         for (int x = 1; x < _game.BoardWidth; x++)
         {
             g.DrawLine(GridPen,
-                ox + x * CellSize, oy,
-                ox + x * CellSize, oy + boardPixelH);
+                ox + x * cellSize, oy,
+                ox + x * cellSize, oy + boardPixelH);
         }
         for (int y = 1; y < _game.BoardHeight; y++)
         {
             g.DrawLine(GridPen,
-                ox,           oy + y * CellSize,
-                ox + boardPixelW, oy + y * CellSize);
+                ox,           oy + y * cellSize,
+                ox + boardPixelW, oy + y * cellSize);
         }
 
         // 边框格(整格填充深灰)
@@ -228,19 +255,19 @@ internal sealed class MainForm : Form
                 if (x == 0 || x == _game.BoardWidth - 1 || y == 0 || y == _game.BoardHeight - 1)
                 {
                     g.FillRectangle(BorderBrush,
-                        ox + x * CellSize,
-                        oy + y * CellSize,
-                        CellSize, CellSize);
+                        ox + x * cellSize,
+                        oy + y * cellSize,
+                        cellSize, cellSize);
                 }
             }
         }
 
         // 食物(圆)
         var foodRect = new Rectangle(
-            ox + _game.Food.X * CellSize + 3,
-            oy + _game.Food.Y * CellSize + 3,
-            CellSize - 6,
-            CellSize - 6);
+            ox + _game.Food.X * cellSize + cellSize / 8,
+            oy + _game.Food.Y * cellSize + cellSize / 8,
+            cellSize - cellSize / 4,
+            cellSize - cellSize / 4);
         g.FillEllipse(FoodBrush, foodRect);
 
         // 蛇(头在前)
@@ -248,25 +275,42 @@ internal sealed class MainForm : Form
         foreach (var p in _game.Snake)
         {
             var rect = new Rectangle(
-                ox + p.X * CellSize + 1,
-                oy + p.Y * CellSize + 1,
-                CellSize - 2,
-                CellSize - 2);
+                ox + p.X * cellSize + 1,
+                oy + p.Y * cellSize + 1,
+                cellSize - 2,
+                cellSize - 2);
             if (index == 0) g.FillRectangle(SnakeHeadBrush, rect);
             else            g.FillRectangle(SnakeBodyBrush, rect);
             index++;
         }
     }
 
+    /// <summary>
+    /// 根据窗口大小动态计算单元格大小。
+    /// </summary>
+    private int CalculateCellSize()
+    {
+        int availableW = ClientSize.Width - BoardMargin * 2;
+        int availableH = ClientSize.Height - _hudHeight - BoardMargin * 2;
+
+        int cellW = availableW / _game.BoardWidth;
+        int cellH = availableH / _game.BoardHeight;
+
+        int cellSize = Math.Min(cellW, cellH);
+        return Math.Max(MinCellSize, Math.Min(MaxCellSize, cellSize));
+    }
+
     private void DrawOverlay(Graphics g)
     {
         if (_game.Status == GameStatus.Running) return;
 
-        var boardRect = new Rectangle(
-            BoardMargin,
-            _hudHeight + BoardMargin,
-            CellSize * _game.BoardWidth,
-            CellSize * _game.BoardHeight);
+        int cellSize = CalculateCellSize();
+        int boardPixelW = cellSize * _game.BoardWidth;
+        int boardPixelH = cellSize * _game.BoardHeight;
+        int ox = BoardMargin + (ClientSize.Width - BoardMargin * 2 - boardPixelW) / 2;
+        int oy = _hudHeight + BoardMargin + (ClientSize.Height - _hudHeight - BoardMargin * 2 - boardPixelH) / 2;
+
+        var boardRect = new Rectangle(ox, oy, boardPixelW, boardPixelH);
         g.FillRectangle(OverlayBrush, boardRect);
 
         using var bigFont   = new Font("Microsoft YaHei UI", 32f, FontStyle.Bold, GraphicsUnit.Point);
@@ -276,6 +320,10 @@ internal sealed class MainForm : Form
         Brush titleBrush = TextBrush;
         switch (_game.Status)
         {
+            case GameStatus.Waiting:
+                title = "贪 食 蛇";
+                sub = "按 [方向键] 或 [空格] 开始游戏";
+                break;
             case GameStatus.Paused:
                 title = "已 暂 停";
                 sub = "按 [空格] 继续   ·   按 [R] 重开   ·   按 [Esc] 退出";
@@ -331,5 +379,138 @@ internal sealed class MainForm : Form
 
         // 向上取整确保足够空间
         _hudHeight = (int)Math.Ceiling(totalHeight);
+    }
+
+    /// <summary>
+    /// 创建菜单栏。
+    /// </summary>
+    private void CreateMenu()
+    {
+        _menuStrip = new MenuStrip();
+        _menuStrip.BackColor = Color.FromArgb(30, 30, 35);
+        _menuStrip.ForeColor = Color.White;
+
+        // 游戏菜单
+        var gameMenu = new ToolStripMenuItem("游戏(&G)");
+        
+        var newGameItem = new ToolStripMenuItem("新游戏(&N)", null, NewGame_Click, Keys.Control | Keys.N);
+        gameMenu.DropDownItems.Add(newGameItem);
+
+        gameMenu.DropDownItems.Add(new ToolStripSeparator());
+
+        // 地图尺寸子菜单
+        var sizeMenu = new ToolStripMenuItem("地图尺寸(&M)");
+        var sizeSmall = new ToolStripMenuItem("小型 (15x15)", null, (s, e) => ChangeBoardSize(15, 15));
+        var sizeMedium = new ToolStripMenuItem("中型 (25x20)", null, (s, e) => ChangeBoardSize(25, 20)) { Checked = true };
+        var sizeLarge = new ToolStripMenuItem("大型 (35x25)", null, (s, e) => ChangeBoardSize(35, 25));
+        var sizeExtraLarge = new ToolStripMenuItem("超大型 (45x30)", null, (s, e) => ChangeBoardSize(45, 30));
+        
+        sizeMenu.DropDownItems.AddRange(new ToolStripItem[] { sizeSmall, sizeMedium, sizeLarge, sizeExtraLarge });
+        gameMenu.DropDownItems.Add(sizeMenu);
+
+        gameMenu.DropDownItems.Add(new ToolStripSeparator());
+
+        var exitItem = new ToolStripMenuItem("退出(&X)", null, (s, e) => Close());
+        gameMenu.DropDownItems.Add(exitItem);
+
+        _menuStrip.Items.Add(gameMenu);
+
+        // 帮助菜单
+        var helpMenu = new ToolStripMenuItem("帮助(&H)");
+        var aboutItem = new ToolStripMenuItem("关于(&A)", null, About_Click);
+        helpMenu.DropDownItems.Add(aboutItem);
+
+        _menuStrip.Items.Add(helpMenu);
+
+        // 将菜单添加到窗体
+        MainMenuStrip = _menuStrip;
+        Controls.Add(_menuStrip);
+    }
+
+    /// <summary>
+    /// 新游戏：重置游戏到 Waiting 状态。
+    /// </summary>
+    private void NewGame_Click(object? sender, EventArgs e)
+    {
+        _timer.Stop();
+        _game.Reset();
+        Invalidate();
+    }
+
+    /// <summary>
+    /// 改变地图尺寸。
+    /// </summary>
+    private void ChangeBoardSize(int width, int height)
+    {
+        // 停止计时器
+        _timer.Stop();
+
+        // 重新创建游戏逻辑
+        _game = new GameLogic(width, height, InitialSpeedMs, MinSpeedMs, SpeedUpEvery);
+        _game.StateChanged += (_, _) => Invalidate();
+
+        // 重新计算 HUD 高度
+        CalculateHudHeight();
+
+        // 调整窗口大小到新地图
+        int initialCellSize = 32;
+        int clientW = BoardMargin * 2 + initialCellSize * width;
+        int clientH = BoardMargin + _hudHeight + initialCellSize * height + BoardMargin;
+        ClientSize = new Size(clientW, clientH);
+
+        // 重置计时器
+        _timer.Interval = _game.StepIntervalMs;
+
+        // 更新菜单选中状态
+        UpdateMenuCheckState(width, height);
+
+        Invalidate();
+    }
+
+    /// <summary>
+    /// 更新地图尺寸菜单的选中状态。
+    /// </summary>
+    private void UpdateMenuCheckState(int width, int height)
+    {
+        if (_menuStrip == null) return;
+
+        var gameMenu = (ToolStripMenuItem)_menuStrip.Items[0];
+        var sizeMenu = (ToolStripMenuItem)gameMenu.DropDownItems[2]; // 地图尺寸
+
+        foreach (ToolStripMenuItem item in sizeMenu.DropDownItems)
+        {
+            item.Checked = false;
+        }
+
+        // 根据尺寸设置选中
+        if (width == 15 && height == 15) sizeMenu.DropDownItems[0].Text = "小型 (15x15)";
+        else if (width == 25 && height == 20) sizeMenu.DropDownItems[1].Text = "中型 (25x20)";
+        else if (width == 35 && height == 25) sizeMenu.DropDownItems[2].Text = "大型 (35x25)";
+        else if (width == 45 && height == 30) sizeMenu.DropDownItems[3].Text = "超大型 (45x30)";
+
+        // 设置选中项
+        if (width == 15 && height == 15) ((ToolStripMenuItem)sizeMenu.DropDownItems[0]).Checked = true;
+        else if (width == 25 && height == 20) ((ToolStripMenuItem)sizeMenu.DropDownItems[1]).Checked = true;
+        else if (width == 35 && height == 25) ((ToolStripMenuItem)sizeMenu.DropDownItems[2]).Checked = true;
+        else if (width == 45 && height == 30) ((ToolStripMenuItem)sizeMenu.DropDownItems[3]).Checked = true;
+    }
+
+    /// <summary>
+    /// 显示关于对话框。
+    /// </summary>
+    private void About_Click(object? sender, EventArgs e)
+    {
+        MessageBox.Show(
+            "贪食蛇 (WindowSnake)\n\n" +
+            "一个使用 C# WinForms 开发的经典贪食蛇游戏。\n\n" +
+            "操作说明：\n" +
+            "• 方向键或 WASD 移动\n" +
+            "• 空格键暂停/继续\n" +
+            "• R 键重新开始\n" +
+            "• Esc 退出游戏\n\n" +
+            "© 2026 WindowSnake",
+            "关于",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
     }
 }
