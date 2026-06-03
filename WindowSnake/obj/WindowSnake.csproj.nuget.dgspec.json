@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "d:\\Projects\\TestCSharp\\WindowSnake\\WindowSnake.csproj": {}
+    "D:\\Projects\\TestCSharp\\WindowSnake\\WindowSnake.csproj": {}
   },
   "projects": {
-    "d:\\Projects\\TestCSharp\\WindowSnake\\WindowSnake.csproj": {
+    "D:\\Projects\\TestCSharp\\WindowSnake\\WindowSnake.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Projects\\TestCSharp\\WindowSnake\\WindowSnake.csproj",
+        "projectUniqueName": "D:\\Projects\\TestCSharp\\WindowSnake\\WindowSnake.csproj",
         "projectName": "WindowSnake",
-        "projectPath": "d:\\Projects\\TestCSharp\\WindowSnake\\WindowSnake.csproj",
+        "projectPath": "D:\\Projects\\TestCSharp\\WindowSnake\\WindowSnake.csproj",
         "packagesPath": "C:\\Users\\c\\.nuget\\packages\\",
-        "outputPath": "d:\\Projects\\TestCSharp\\WindowSnake\\obj\\",
+        "outputPath": "D:\\Projects\\TestCSharp\\WindowSnake\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\c\\AppData\\Roaming\\NuGet\\NuGet.Config"

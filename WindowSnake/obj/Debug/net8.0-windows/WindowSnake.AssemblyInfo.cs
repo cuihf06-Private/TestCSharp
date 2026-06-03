@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("WindowSnake")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2a00171af1fa913f98328ca9e94bd5e4caa75997")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+73baf7418db95ff6810e13a86cde280398bd1de5")]
 [assembly: System.Reflection.AssemblyProductAttribute("WindowSnake")]
 [assembly: System.Reflection.AssemblyTitleAttribute("WindowSnake")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -41,6 +41,7 @@ internal sealed class MainForm : Form
     private const float HudTopPadding = 12f;
     private const float HudLineGap = 8f;
     private const float HudBottomPadding = 12f;
+    private const float MenuStripExtraPadding = 8f; // MenuStrip 下方的额外间距
 
     // 动态计算的 HUD 高度
     private int _hudHeight;
@@ -69,8 +70,10 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
+        // 关键：启用 ResizeRedraw 样式，确保拖拽窗口时自动重绘
+        SetStyle(ControlStyles.ResizeRedraw | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        
         // 渲染相关
-        DoubleBuffered = true;
         BackColor = Color.FromArgb(18, 18, 22);
         Text = "贪食蛇 (WindowSnake)";
         FormBorderStyle = FormBorderStyle.Sizable;
@@ -105,6 +108,31 @@ internal sealed class MainForm : Form
         {
             CalculateHudHeight();
             Invalidate();
+        };
+        
+        // 拖拽开始时暂停计时器，避免拖拽过程中游戏继续运行导致画面不同步
+        ResizeBegin += (_, _) =>
+        {
+            // 保存拖拽前的运行状态
+            if (_game.Status == GameStatus.Running)
+            {
+                _timer.Stop();
+            }
+        };
+        
+        // 拖拽结束时恢复计时器并强制完整重绘
+        ResizeEnd += (_, _) =>
+        {
+            // 恢复游戏运行
+            if (_game.Status == GameStatus.Running)
+            {
+                _timer.Start();
+            }
+            // 重新计算 HUD 高度（可能窗口大小已改变）
+            CalculateHudHeight();
+            // 强制立即重绘，清除拖拽残留的旧画面
+            Invalidate();
+            Update();
         };
 
         // 释放计时器
@@ -210,8 +238,10 @@ internal sealed class MainForm : Form
         using var infoFont  = new Font("Microsoft YaHei UI", infoFontSize, FontStyle.Regular, GraphicsUnit.Point);
         using var hintFont  = new Font("Microsoft YaHei UI", hintFontSize, FontStyle.Regular, GraphicsUnit.Point);
 
+        // 关键修复：HUD 绘制起始位置需要跳过 MenuStrip 的高度
+        float menuStripHeight = _menuStrip?.Height ?? 0;
         float x = BoardMargin;
-        float y = HudTopPadding;
+        float y = menuStripHeight + HudTopPadding;
 
         // 第 1 行:状态
         string stateText = _game.Status switch
@@ -339,6 +369,38 @@ internal sealed class MainForm : Form
         return Math.Max(MinFontSize, Math.Min(MaxFontSize, fontSize));
     }
 
+    /// <summary>
+    /// 计算 HUD 区域高度（内部方法，避免重复代码）。
+    /// </summary>
+    private int CalculateHudHeightInternal()
+    {
+        using var tempGraphics = CreateGraphics();
+        tempGraphics.SmoothingMode = SmoothingMode.AntiAlias;
+        
+        float titleFontSize = CalculateFontSize(12f);
+        float infoFontSize = CalculateFontSize(10f);
+        float hintFontSize = CalculateFontSize(9.5f);
+
+        using var titleFont = new Font("Microsoft YaHei UI", titleFontSize, FontStyle.Bold, GraphicsUnit.Point);
+        using var infoFont  = new Font("Microsoft YaHei UI", infoFontSize, FontStyle.Regular, GraphicsUnit.Point);
+        using var hintFont  = new Font("Microsoft YaHei UI", hintFontSize, FontStyle.Regular, GraphicsUnit.Point);
+
+        // 关键修复：HUD 高度必须包含 MenuStrip 的高度
+        float menuStripHeight = _menuStrip?.Height ?? 0;
+        float totalHeight = menuStripHeight + HudTopPadding;
+        
+        string stateLine = "状态:游戏中";
+        totalHeight += tempGraphics.MeasureString(stateLine, titleFont).Height + HudLineGap;
+
+        string infoLine = "分数:  999    长度: 99    速度:999.9 步/秒    地图:99x99";
+        totalHeight += tempGraphics.MeasureString(infoLine, infoFont).Height + HudLineGap;
+
+        string hintLine = "WASD / 方向键 移动    空格 暂停    R 重开    Esc 退出";
+        totalHeight += tempGraphics.MeasureString(hintLine, hintFont).Height + HudBottomPadding;
+
+        return (int)Math.Ceiling(totalHeight);
+    }
+
     private void DrawOverlay(Graphics g)
     {
         if (_game.Status == GameStatus.Running) return;
@@ -401,33 +463,7 @@ internal sealed class MainForm : Form
     /// </summary>
     private void CalculateHudHeight()
     {
-        // 创建临时 Graphics 对象用于测量
-        using var tempGraphics = CreateGraphics();
-        
-        // 使用动态计算的字体大小
-        float titleFontSize = CalculateFontSize(12f);
-        float infoFontSize = CalculateFontSize(10f);
-        float hintFontSize = CalculateFontSize(9.5f);
-
-        using var titleFont = new Font("Microsoft YaHei UI", titleFontSize, FontStyle.Bold, GraphicsUnit.Point);
-        using var infoFont  = new Font("Microsoft YaHei UI", infoFontSize, FontStyle.Regular, GraphicsUnit.Point);
-        using var hintFont  = new Font("Microsoft YaHei UI", hintFontSize, FontStyle.Regular, GraphicsUnit.Point);
-
-        // 第 1 行:状态
-        string stateLine = "状态:游戏中"; // 使用最长文本估算
-        float totalHeight = HudTopPadding;
-        totalHeight += tempGraphics.MeasureString(stateLine, titleFont).Height + HudLineGap;
-
-        // 第 2 行:分数/长度/速度/地图（使用示例文本）
-        string infoLine = "分数:  999    长度: 99    速度:999.9 步/秒    地图:99x99";
-        totalHeight += tempGraphics.MeasureString(infoLine, infoFont).Height + HudLineGap;
-
-        // 第 3 行:操作提示
-        string hintLine = "WASD / 方向键 移动    空格 暂停    R 重开    Esc 退出";
-        totalHeight += tempGraphics.MeasureString(hintLine, hintFont).Height + HudBottomPadding;
-
-        // 向上取整确保足够空间
-        _hudHeight = (int)Math.Ceiling(totalHeight);
+        _hudHeight = CalculateHudHeightInternal();
     }
 
     /// <summary>
