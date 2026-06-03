@@ -24,6 +24,12 @@ internal sealed class MainForm : Form
     private const int MinCellSize = 16;    // 最小单元格大小
     private const int MaxCellSize = 48;    // 最大单元格大小
 
+    // 字体缩放参数
+    private const float BaseFontSize = 12f;     // 基准字体大小
+    private const float MinFontSize = 6f;       // 最小字体大小
+    private const float MaxFontSize = 24f;      // 最大字体大小
+    private const int ReferenceWidth = 800;     // 参考窗口宽度
+
     // ---- 棋盘逻辑尺寸 / 难度参数 ----
     private const int BoardW = 25;
     private const int BoardH = 20;
@@ -94,8 +100,12 @@ internal sealed class MainForm : Form
         _timer.Interval = _game.StepIntervalMs;
         _timer.Tick += GameTimer_Tick;
 
-        // 窗口大小改变时重绘
-        Resize += (_, _) => Invalidate();
+        // 窗口大小改变时重绘并重新计算 HUD
+        Resize += (_, _) =>
+        {
+            CalculateHudHeight();
+            Invalidate();
+        };
 
         // 释放计时器
         FormClosed += (_, _) => _timer.Dispose();
@@ -122,8 +132,22 @@ internal sealed class MainForm : Form
         {
             _game.StartGame();
             _timer.Start();
+            
+            // 如果是方向键，设置方向
+            if (isDirectionKey)
+            {
+                switch (keyData)
+                {
+                    case Keys.Up: case Keys.W:     _game.TrySetDirection(Direction.Up);    break;
+                    case Keys.Down: case Keys.S:   _game.TrySetDirection(Direction.Down);  break;
+                    case Keys.Left: case Keys.A:   _game.TrySetDirection(Direction.Left);  break;
+                    case Keys.Right: case Keys.D:  _game.TrySetDirection(Direction.Right); break;
+                }
+            }
+            return true; // 已经处理，不再继续
         }
 
+        // 非 Waiting 状态的按键处理
         switch (keyData)
         {
             case Keys.Up:    _game.TrySetDirection(Direction.Up);    return true;
@@ -176,10 +200,15 @@ internal sealed class MainForm : Form
         using var linePen = new Pen(Color.FromArgb(60, 60, 70));
         g.DrawLine(linePen, 0, _hudHeight, ClientSize.Width, _hudHeight);
 
+        // 动态计算字体大小
+        float titleFontSize = CalculateFontSize(12f);
+        float infoFontSize = CalculateFontSize(10f);
+        float hintFontSize = CalculateFontSize(9.5f);
+
         // 字体集中创建一次
-        using var titleFont = new Font("Microsoft YaHei UI", 12f, FontStyle.Bold, GraphicsUnit.Point);
-        using var infoFont  = new Font("Microsoft YaHei UI", 10f, FontStyle.Regular, GraphicsUnit.Point);
-        using var hintFont  = new Font("Microsoft YaHei UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
+        using var titleFont = new Font("Microsoft YaHei UI", titleFontSize, FontStyle.Bold, GraphicsUnit.Point);
+        using var infoFont  = new Font("Microsoft YaHei UI", infoFontSize, FontStyle.Regular, GraphicsUnit.Point);
+        using var hintFont  = new Font("Microsoft YaHei UI", hintFontSize, FontStyle.Regular, GraphicsUnit.Point);
 
         float x = BoardMargin;
         float y = HudTopPadding;
@@ -300,6 +329,16 @@ internal sealed class MainForm : Form
         return Math.Max(MinCellSize, Math.Min(MaxCellSize, cellSize));
     }
 
+    /// <summary>
+    /// 根据窗口大小动态计算字体大小。
+    /// </summary>
+    private float CalculateFontSize(float baseSize)
+    {
+        float scale = (float)ClientSize.Width / ReferenceWidth;
+        float fontSize = baseSize * scale;
+        return Math.Max(MinFontSize, Math.Min(MaxFontSize, fontSize));
+    }
+
     private void DrawOverlay(Graphics g)
     {
         if (_game.Status == GameStatus.Running) return;
@@ -313,8 +352,12 @@ internal sealed class MainForm : Form
         var boardRect = new Rectangle(ox, oy, boardPixelW, boardPixelH);
         g.FillRectangle(OverlayBrush, boardRect);
 
-        using var bigFont   = new Font("Microsoft YaHei UI", 32f, FontStyle.Bold, GraphicsUnit.Point);
-        using var smallFont = new Font("Microsoft YaHei UI", 12f, FontStyle.Regular, GraphicsUnit.Point);
+        // 动态计算字体大小
+        float bigFontSize = CalculateFontSize(32f);
+        float smallFontSize = CalculateFontSize(12f);
+
+        using var bigFont   = new Font("Microsoft YaHei UI", bigFontSize, FontStyle.Bold, GraphicsUnit.Point);
+        using var smallFont = new Font("Microsoft YaHei UI", smallFontSize, FontStyle.Regular, GraphicsUnit.Point);
 
         string title, sub;
         Brush titleBrush = TextBrush;
@@ -360,17 +403,23 @@ internal sealed class MainForm : Form
     {
         // 创建临时 Graphics 对象用于测量
         using var tempGraphics = CreateGraphics();
-        using var titleFont = new Font("Microsoft YaHei UI", 12f, FontStyle.Bold, GraphicsUnit.Point);
-        using var infoFont  = new Font("Microsoft YaHei UI", 10f, FontStyle.Regular, GraphicsUnit.Point);
-        using var hintFont  = new Font("Microsoft YaHei UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
+        
+        // 使用动态计算的字体大小
+        float titleFontSize = CalculateFontSize(12f);
+        float infoFontSize = CalculateFontSize(10f);
+        float hintFontSize = CalculateFontSize(9.5f);
+
+        using var titleFont = new Font("Microsoft YaHei UI", titleFontSize, FontStyle.Bold, GraphicsUnit.Point);
+        using var infoFont  = new Font("Microsoft YaHei UI", infoFontSize, FontStyle.Regular, GraphicsUnit.Point);
+        using var hintFont  = new Font("Microsoft YaHei UI", hintFontSize, FontStyle.Regular, GraphicsUnit.Point);
 
         // 第 1 行:状态
         string stateLine = "状态:游戏中"; // 使用最长文本估算
         float totalHeight = HudTopPadding;
         totalHeight += tempGraphics.MeasureString(stateLine, titleFont).Height + HudLineGap;
 
-        // 第 2 行:分数/长度/速度（使用示例文本）
-        string infoLine = "分数:  999    长度: 99    速度:999.9 步/秒";
+        // 第 2 行:分数/长度/速度/地图（使用示例文本）
+        string infoLine = "分数:  999    长度: 99    速度:999.9 步/秒    地图:99x99";
         totalHeight += tempGraphics.MeasureString(infoLine, infoFont).Height + HudLineGap;
 
         // 第 3 行:操作提示
@@ -401,11 +450,17 @@ internal sealed class MainForm : Form
         // 地图尺寸子菜单
         var sizeMenu = new ToolStripMenuItem("地图尺寸(&M)");
         var sizeSmall = new ToolStripMenuItem("小型 (15x15)", null, (s, e) => ChangeBoardSize(15, 15));
-        var sizeMedium = new ToolStripMenuItem("中型 (25x20)", null, (s, e) => ChangeBoardSize(25, 20)) { Checked = true };
-        var sizeLarge = new ToolStripMenuItem("大型 (35x25)", null, (s, e) => ChangeBoardSize(35, 25));
-        var sizeExtraLarge = new ToolStripMenuItem("超大型 (45x30)", null, (s, e) => ChangeBoardSize(45, 30));
+        var sizeMedium = new ToolStripMenuItem("中型 (25x25)", null, (s, e) => ChangeBoardSize(25, 25)) { Checked = true };
+        var sizeLarge = new ToolStripMenuItem("大型 (35x35)", null, (s, e) => ChangeBoardSize(35, 35));
+        var sizeExtraLarge = new ToolStripMenuItem("超大型 (45x45)", null, (s, e) => ChangeBoardSize(45, 45));
         
         sizeMenu.DropDownItems.AddRange(new ToolStripItem[] { sizeSmall, sizeMedium, sizeLarge, sizeExtraLarge });
+        
+        sizeMenu.DropDownItems.Add(new ToolStripSeparator());
+        
+        var customSizeItem = new ToolStripMenuItem("自定义大小...", null, CustomSize_Click);
+        sizeMenu.DropDownItems.Add(customSizeItem);
+        
         gameMenu.DropDownItems.Add(sizeMenu);
 
         gameMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -435,6 +490,102 @@ internal sealed class MainForm : Form
         _timer.Stop();
         _game.Reset();
         Invalidate();
+    }
+
+    /// <summary>
+    /// 显示自定义地图尺寸对话框。
+    /// </summary>
+    private void CustomSize_Click(object? sender, EventArgs e)
+    {
+        using var dialog = new Form
+        {
+            Text = "自定义地图尺寸",
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MaximizeBox = false,
+            MinimizeBox = false,
+            StartPosition = FormStartPosition.CenterParent,
+            Size = new System.Drawing.Size(320, 180),
+            BackColor = Color.FromArgb(30, 30, 35)
+        };
+
+        var lblWidth = new Label
+        {
+            Text = "宽度 (6-50):",
+            Location = new System.Drawing.Point(20, 20),
+            Size = new System.Drawing.Size(100, 20),
+            ForeColor = Color.White,
+            TextAlign = ContentAlignment.MiddleRight
+        };
+
+        var txtWidth = new TextBox
+        {
+            Location = new System.Drawing.Point(130, 18),
+            Size = new System.Drawing.Size(80, 20),
+            Text = _game.BoardWidth.ToString()
+        };
+
+        var lblHeight = new Label
+        {
+            Text = "高度 (6-50):",
+            Location = new System.Drawing.Point(20, 50),
+            Size = new System.Drawing.Size(100, 20),
+            ForeColor = Color.White,
+            TextAlign = ContentAlignment.MiddleRight
+        };
+
+        var txtHeight = new TextBox
+        {
+            Location = new System.Drawing.Point(130, 48),
+            Size = new System.Drawing.Size(80, 20),
+            Text = _game.BoardHeight.ToString()
+        };
+
+        var btnOk = new Button
+        {
+            Text = "确定",
+            Location = new System.Drawing.Point(80, 90),
+            Size = new System.Drawing.Size(70, 30),
+            DialogResult = DialogResult.OK
+        };
+
+        var btnCancel = new Button
+        {
+            Text = "取消",
+            Location = new System.Drawing.Point(160, 90),
+            Size = new System.Drawing.Size(70, 30),
+            DialogResult = DialogResult.Cancel
+        };
+
+        dialog.Controls.AddRange(new Control[] { lblWidth, txtWidth, lblHeight, txtHeight, btnOk, btnCancel });
+        dialog.AcceptButton = btnOk;
+        dialog.CancelButton = btnCancel;
+
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            if (int.TryParse(txtWidth.Text, out int width) && int.TryParse(txtHeight.Text, out int height))
+            {
+                if (width >= 6 && width <= 50 && height >= 6 && height <= 50)
+                {
+                    ChangeBoardSize(width, height);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "地图尺寸必须在 6-50 之间！",
+                        "错误",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+            }
+            else
+            {
+                MessageBox.Show(
+                    "请输入有效的数字！",
+                    "错误",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
     }
 
     /// <summary>
@@ -483,16 +634,10 @@ internal sealed class MainForm : Form
         }
 
         // 根据尺寸设置选中
-        if (width == 15 && height == 15) sizeMenu.DropDownItems[0].Text = "小型 (15x15)";
-        else if (width == 25 && height == 20) sizeMenu.DropDownItems[1].Text = "中型 (25x20)";
-        else if (width == 35 && height == 25) sizeMenu.DropDownItems[2].Text = "大型 (35x25)";
-        else if (width == 45 && height == 30) sizeMenu.DropDownItems[3].Text = "超大型 (45x30)";
-
-        // 设置选中项
         if (width == 15 && height == 15) ((ToolStripMenuItem)sizeMenu.DropDownItems[0]).Checked = true;
-        else if (width == 25 && height == 20) ((ToolStripMenuItem)sizeMenu.DropDownItems[1]).Checked = true;
-        else if (width == 35 && height == 25) ((ToolStripMenuItem)sizeMenu.DropDownItems[2]).Checked = true;
-        else if (width == 45 && height == 30) ((ToolStripMenuItem)sizeMenu.DropDownItems[3]).Checked = true;
+        else if (width == 25 && height == 25) ((ToolStripMenuItem)sizeMenu.DropDownItems[1]).Checked = true;
+        else if (width == 35 && height == 35) ((ToolStripMenuItem)sizeMenu.DropDownItems[2]).Checked = true;
+        else if (width == 45 && height == 45) ((ToolStripMenuItem)sizeMenu.DropDownItems[3]).Checked = true;
     }
 
     /// <summary>
