@@ -20,8 +20,7 @@ internal sealed class MainForm : Form
 {
     // ---- 棋盘几何参数(DIP,WinForms 自动按 DPI 缩放) ----
     private const int CellSize = 32;       // 每格 DIP,决定窗口整体大小
-    private const int HudHeight = 124;     // 顶部 HUD 区高(三行文字 + 上下 padding,留够余量)
-    private const int BoardMargin = 16;    // 棋盘外边距(避免与基类 Form.Margin 同名)
+    private const int BoardMargin = 16;    // 棋盘外边距
 
     // ---- 棋盘逻辑尺寸 / 难度参数 ----
     private const int BoardW = 25;
@@ -29,6 +28,14 @@ internal sealed class MainForm : Form
     private const int InitialSpeedMs = 130;
     private const int MinSpeedMs     = 55;
     private const int SpeedUpEvery   = 3;
+
+    // HUD 布局常量
+    private const float HudTopPadding = 12f;
+    private const float HudLineGap = 8f;
+    private const float HudBottomPadding = 12f;
+
+    // 动态计算的 HUD 高度
+    private int _hudHeight;
 
     private readonly GameLogic _game;
     private readonly System.Windows.Forms.Timer _timer = new();
@@ -53,27 +60,19 @@ internal sealed class MainForm : Form
     {
         // 渲染相关
         DoubleBuffered = true;
-        SetStyle(
-            ControlStyles.OptimizedDoubleBuffer |
-            ControlStyles.AllPaintingInWmPaint  |
-            ControlStyles.UserPaint             |
-            ControlStyles.ResizeRedraw,
-            true);
         BackColor = Color.FromArgb(18, 18, 22);
         Text = "贪食蛇 (WindowSnake)";
-        FormBorderStyle = FormBorderStyle.FixedDialog; // 固定大小,游戏窗口保持正方格
+        FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         KeyPreview = true;
 
-        // 设置客户区大小。WinForms 会自动算出 Form.Size = ClientSize + 标题栏 + 边框。
-        // 注意:不要再额外设 MinimumSize / MaximumSize。
-        // 之前就是在这里用 clientW+16 / clientH+38 硬编码估算的边界值,在 100% DPI 下还能凑合,
-        // 一旦 DPI 缩放大于 100%(150% / 200% 等),WinForms 算出的实际 Form.Size 就会超过
-        // MaximumSize,从而把 ClientSize 反向压缩,棋盘就会被切掉一截。
-        // 用 FixedDialog 锁死不能调整大小,这里只设 ClientSize 就够了。
+        // 计算 HUD 实际高度
+        CalculateHudHeight();
+
+        // 设置客户区大小
         int clientW = BoardMargin * 2 + CellSize * BoardW;
-        int clientH = BoardMargin + HudHeight + CellSize * BoardH + BoardMargin;
+        int clientH = BoardMargin + _hudHeight + CellSize * BoardH + BoardMargin;
         ClientSize = new Size(clientW, clientH);
 
         // 核心游戏逻辑
@@ -152,19 +151,15 @@ internal sealed class MainForm : Form
     {
         // HUD 与棋盘的分隔线
         using var linePen = new Pen(Color.FromArgb(60, 60, 70));
-        g.DrawLine(linePen, 0, HudHeight, ClientSize.Width, HudHeight);
+        g.DrawLine(linePen, 0, _hudHeight, ClientSize.Width, _hudHeight);
 
-        // 字体集中创建一次。注意:中文在不同 DPI / 系统字体替代下,行高可能比经验值大很多,
-        // 所以下面每行都用 MeasureString 取真实高度后再累加 y,避免重叠。
+        // 字体集中创建一次
         using var titleFont = new Font("Microsoft YaHei UI", 12f, FontStyle.Bold, GraphicsUnit.Point);
         using var infoFont  = new Font("Microsoft YaHei UI", 10f, FontStyle.Regular, GraphicsUnit.Point);
         using var hintFont  = new Font("Microsoft YaHei UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
 
-        const float topPad = 12f;   // 第一行顶部留白
-        const float lineGap = 8f;   // 行间最小间距(实测行高不够时再补)
-
         float x = BoardMargin;
-        float y = topPad;
+        float y = HudTopPadding;
 
         // 第 1 行:状态
         string stateText = _game.Status switch
@@ -186,27 +181,25 @@ internal sealed class MainForm : Form
         string stateLine = $"状态:{stateText}";
         var stateSize = g.MeasureString(stateLine, titleFont);
         g.DrawString(stateLine, titleFont, stateBrush, x, y);
-        y += stateSize.Height + lineGap;
+        y += stateSize.Height + HudLineGap;
 
         // 第 2 行:分数 / 长度 / 速度
         double stepsPerSec = 1000.0 / _game.StepIntervalMs;
         string info = $"分数:{_game.Score,5}    长度:{_game.Length,3}    速度:{stepsPerSec,5:F1} 步/秒";
         var infoSize = g.MeasureString(info, infoFont);
         g.DrawString(info, infoFont, TextBrush, x, y);
-        y += infoSize.Height + lineGap;
+        y += infoSize.Height + HudLineGap;
 
         // 第 3 行:操作提示
         const string hint = "WASD / 方向键 移动    空格 暂停    R 重开    Esc 退出";
         var hintSize = g.MeasureString(hint, hintFont);
         g.DrawString(hint, hintFont, DimTextBrush, x, y);
-        // 注释:此处不再累加,本函数不依赖 HudHeight 反推布局;
-        // 如果想验证 HUD 实际占用未越界,可在此比较 (y + hintSize.Height) 与 HudHeight。
     }
 
     private void DrawBoard(Graphics g)
     {
         int ox = BoardMargin;
-        int oy = HudHeight + BoardMargin;
+        int oy = _hudHeight + BoardMargin;
         int boardPixelW = CellSize * _game.BoardWidth;
         int boardPixelH = CellSize * _game.BoardHeight;
 
@@ -271,7 +264,7 @@ internal sealed class MainForm : Form
 
         var boardRect = new Rectangle(
             BoardMargin,
-            HudHeight + BoardMargin,
+            _hudHeight + BoardMargin,
             CellSize * _game.BoardWidth,
             CellSize * _game.BoardHeight);
         g.FillRectangle(OverlayBrush, boardRect);
@@ -310,5 +303,33 @@ internal sealed class MainForm : Form
         float sx = boardRect.X + (boardRect.Width  - subSize.Width)    / 2f;
         g.DrawString(title, bigFont,   titleBrush, tx, ty);
         g.DrawString(sub,   smallFont, DimTextBrush, sx, sy);
+    }
+
+    /// <summary>
+    /// 根据当前字体和 DPI 计算 HUD 实际需要的像素高度。
+    /// </summary>
+    private void CalculateHudHeight()
+    {
+        // 创建临时 Graphics 对象用于测量
+        using var tempGraphics = CreateGraphics();
+        using var titleFont = new Font("Microsoft YaHei UI", 12f, FontStyle.Bold, GraphicsUnit.Point);
+        using var infoFont  = new Font("Microsoft YaHei UI", 10f, FontStyle.Regular, GraphicsUnit.Point);
+        using var hintFont  = new Font("Microsoft YaHei UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
+
+        // 第 1 行:状态
+        string stateLine = "状态:游戏中"; // 使用最长文本估算
+        float totalHeight = HudTopPadding;
+        totalHeight += tempGraphics.MeasureString(stateLine, titleFont).Height + HudLineGap;
+
+        // 第 2 行:分数/长度/速度（使用示例文本）
+        string infoLine = "分数:  999    长度: 99    速度:999.9 步/秒";
+        totalHeight += tempGraphics.MeasureString(infoLine, infoFont).Height + HudLineGap;
+
+        // 第 3 行:操作提示
+        string hintLine = "WASD / 方向键 移动    空格 暂停    R 重开    Esc 退出";
+        totalHeight += tempGraphics.MeasureString(hintLine, hintFont).Height + HudBottomPadding;
+
+        // 向上取整确保足够空间
+        _hudHeight = (int)Math.Ceiling(totalHeight);
     }
 }
