@@ -1,0 +1,14 @@
+D:\Projects\TestCSharp\bin\Release\net8.0\SnakeGame.exe
+D:\Projects\TestCSharp\bin\Release\net8.0\SnakeGame.deps.json
+D:\Projects\TestCSharp\bin\Release\net8.0\SnakeGame.runtimeconfig.json
+D:\Projects\TestCSharp\bin\Release\net8.0\SnakeGame.dll
+D:\Projects\TestCSharp\bin\Release\net8.0\SnakeGame.pdb
+D:\Projects\TestCSharp\obj\Release\net8.0\SnakeGame.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\TestCSharp\obj\Release\net8.0\SnakeGame.AssemblyInfoInputs.cache
+D:\Projects\TestCSharp\obj\Release\net8.0\SnakeGame.AssemblyInfo.cs
+D:\Projects\TestCSharp\obj\Release\net8.0\SnakeGame.csproj.CoreCompileInputs.cache
+D:\Projects\TestCSharp\obj\Release\net8.0\SnakeGame.dll
+D:\Projects\TestCSharp\obj\Release\net8.0\refint\SnakeGame.dll
+D:\Projects\TestCSharp\obj\Release\net8.0\SnakeGame.pdb
+D:\Projects\TestCSharp\obj\Release\net8.0\SnakeGame.genruntimeconfig.cache
+D:\Projects\TestCSharp\obj\Release\net8.0\ref\SnakeGame.dll
