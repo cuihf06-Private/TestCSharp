@@ -3,11 +3,10 @@
 import { useSnakeGame } from "./hooks/useSnakeGame";
 import { Board } from "./components/Board";
 import { ScorePanel } from "./components/ScorePanel";
-import { DirectionPad } from "./components/DirectionPad";
 import { Kbd } from "./components/Kbd";
 
 function App() {
-  const { state, start, togglePause, reset, changeDirection } = useSnakeGame();
+  const { state, start, togglePause, reset } = useSnakeGame();
 
   const isRunning = state.status === "running";
   const isPaused = state.status === "paused";
@@ -15,79 +14,73 @@ function App() {
   const isIdle = state.status === "idle";
 
   return (
-    <div className="min-h-full w-full flex flex-col items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-md flex flex-col gap-4 animate-slide-in">
+    <div className="h-full w-full flex items-stretch p-5 gap-5">
+      {/* 左侧：信息面板 */}
+      <div className="w-56 flex-shrink-0 flex flex-col gap-4 justify-center animate-slide-in">
         {/* 标题区 */}
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-mint-400 to-mint-600
-                            shadow-soft flex items-center justify-center text-white text-lg"
-              aria-hidden
-            >
-              <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
-                <path
-                  d="M4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8c-2.5 0-4.7-1.1-6.2-2.9"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                />
-                <circle cx="9" cy="11" r="1.2" fill="currentColor" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-800 leading-none">
-                贪食蛇
-              </h1>
-              <p className="text-[11px] text-slate-400 mt-0.5">Snake · Tauri + React</p>
-            </div>
+        <header className="flex items-center gap-2.5">
+          <div
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-mint-400 to-mint-600
+                          shadow-soft flex items-center justify-center text-white text-lg flex-shrink-0"
+            aria-hidden
+          >
+            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+              <path
+                d="M4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8c-2.5 0-4.7-1.1-6.2-2.9"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+              />
+              <circle cx="9" cy="11" r="1.2" fill="currentColor" />
+            </svg>
           </div>
+          <div>
+            <h1 className="text-lg font-bold text-slate-800 leading-none">
+              贪食蛇
+            </h1>
+            <p className="text-[11px] text-slate-400 mt-0.5">Snake · Tauri + React</p>
+          </div>
+        </header>
+
+        {/* 状态 */}
+        <span
+          className={
+            "chip self-start " +
+            (isRunning
+              ? "bg-mint-50 text-mint-600 border-mint-100"
+              : isPaused
+              ? "bg-amber-50 text-amber-600 border-amber-100"
+              : isOver
+              ? "bg-rose-50 text-rose-500 border-rose-100"
+              : "bg-slate-50 text-slate-500 border-slate-100")
+          }
+        >
           <span
             className={
-              "chip " +
+              "w-1.5 h-1.5 rounded-full " +
               (isRunning
-                ? "bg-mint-50 text-mint-600 border-mint-100"
+                ? "bg-mint-500 animate-pulse-soft"
                 : isPaused
-                ? "bg-amber-50 text-amber-600 border-amber-100"
+                ? "bg-amber-500"
                 : isOver
-                ? "bg-rose-50 text-rose-500 border-rose-100"
-                : "bg-slate-50 text-slate-500 border-slate-100")
+                ? "bg-rose-500"
+                : "bg-slate-400")
             }
-          >
-            <span
-              className={
-                "w-1.5 h-1.5 rounded-full " +
-                (isRunning
-                  ? "bg-mint-500 animate-pulse-soft"
-                  : isPaused
-                  ? "bg-amber-500"
-                  : isOver
-                  ? "bg-rose-500"
-                  : "bg-slate-400")
-              }
-            />
-            {isRunning
-              ? "进行中"
-              : isPaused
-              ? "已暂停"
-              : isOver
-              ? "已结束"
-              : "待开始"}
-          </span>
-        </header>
+          />
+          {isRunning
+            ? "进行中"
+            : isPaused
+            ? "已暂停"
+            : isOver
+            ? "已结束"
+            : "待开始"}
+        </span>
 
         {/* 分数面板 */}
         <ScorePanel score={state.score} highScore={state.highScore} level={state.level} />
 
-        {/* 棋盘 */}
-        <Board
-          snake={state.snake}
-          food={state.food}
-          status={state.status}
-        />
-
         {/* 操作按钮 */}
-        <div className="flex items-center gap-2 justify-center">
+        <div className="flex flex-col gap-2">
           {(isIdle || isOver) && (
             <button className="btn-primary" onClick={start}>
               <PlayIcon />
@@ -112,18 +105,27 @@ function App() {
           </button>
         </div>
 
-        {/* 触屏方向键 */}
-        <DirectionPad onChange={changeDirection} />
+        {/* 键盘提示 */}
+        <div className="text-xs text-slate-400 leading-relaxed">
+          <div className="flex items-center gap-1 flex-wrap">
+            <Kbd>W</Kbd><Kbd>A</Kbd><Kbd>S</Kbd><Kbd>D</Kbd>
+            <span className="ml-1">/ 方向键 控制</span>
+          </div>
+          <div className="flex items-center gap-1 mt-1">
+            <Kbd>Space</Kbd>
+            <span>暂停 / 开始</span>
+          </div>
+        </div>
+      </div>
 
-        {/* 提示 */}
-        <div className="text-center text-xs text-slate-400 mt-1">
-          <span className="hidden sm:inline">
-            方向键 / <Kbd>W</Kbd>
-            <Kbd>A</Kbd>
-            <Kbd>S</Kbd>
-            <Kbd>D</Kbd> 控制 · <Kbd>Space</Kbd> 暂停 / 开始
-          </span>
-          <span className="sm:hidden">使用下方方向键操作</span>
+      {/* 右侧：游戏棋盘（方形，占满高度） */}
+      <div className="flex-1 min-w-0 flex items-center justify-center">
+        <div className="h-full aspect-square max-h-full">
+          <Board
+            snake={state.snake}
+            food={state.food}
+            status={state.status}
+          />
         </div>
       </div>
     </div>
