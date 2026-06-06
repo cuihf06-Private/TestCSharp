@@ -5,6 +5,10 @@
 /*/*/*/*/*.exe
 /*/*/*/*/*/*.exe
 
+# === .NET / C# 编译产物 ===
+**/bin/
+**/obj/
+
 # === Node / npm ===
 **/node_modules/
 **/npm-debug.log*
