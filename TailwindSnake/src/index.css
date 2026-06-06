@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-leaf-50 via-white to-mint-50 text-slate-700;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* 隐藏滚动条但保留滚动能力(优雅) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-mint-200 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-mint-300;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white/80 backdrop-blur-sm border border-mint-100 rounded-2xl shadow-soft;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl
+           text-sm font-medium transition-all duration-150
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-mint-400 focus-visible:ring-offset-2
+           focus-visible:ring-offset-leaf-50
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-mint-500 text-white shadow-soft hover:bg-mint-600;
+  }
+
+  .btn-ghost {
+    @apply btn text-slate-600 hover:text-mint-600 hover:bg-mint-50;
+  }
+
+  .btn-outline {
+    @apply btn border border-mint-200 text-mint-600 hover:bg-mint-50;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+           text-xs font-medium bg-mint-50 text-mint-600 border border-mint-100;
+  }
+
+  .kbd {
+    @apply inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5
+           text-[11px] font-semibold rounded-md border border-slate-200
+           bg-white text-slate-500 shadow-[0_1px_0_rgba(0,0,0,0.05)];
+  }
+}
