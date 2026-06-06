@@ -1,6 +1,7 @@
 // 游戏循环 hook:按当前 speed 节拍推进游戏
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { emit } from "@tauri-apps/api/event";
 import { createInitialState, step } from "../game/logic";
 import { Direction, GameState, ThemeId } from "../game/types";
 import { isOpposite } from "../game/utils";
@@ -145,6 +146,8 @@ export function useSnakeGame() {
   const setGridSize = useCallback((size: number) => {
     writeGridSize(size);
     setGridSizeState(size);
+    // 通知 Rust 更新菜单勾选
+    emit("state:grid-size", size).catch(() => {});
     // 重置游戏
     setState((prev) => {
       const fresh = createInitialState(size, Math.max(prev.highScore, prev.score));
@@ -155,6 +158,15 @@ export function useSnakeGame() {
   const setThemeId = useCallback((id: ThemeId) => {
     writeTheme(id);
     setThemeIdState(id);
+    // 通知 Rust 更新菜单勾选
+    emit("state:theme", id).catch(() => {});
+  }, []);
+
+  // 启动时同步初始状态到原生菜单
+  useEffect(() => {
+    emit("state:grid-size", gridSize).catch(() => {});
+    emit("state:theme", themeId).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 键盘控制
