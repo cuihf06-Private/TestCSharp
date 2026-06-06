@@ -1,5 +1,6 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { GRID_SIZE, Point } from "../game/types";
+import { Kbd } from "./Kbd";
 
 interface BoardProps {
   snake: Point[];
@@ -14,6 +15,21 @@ interface BoardProps {
  */
 function BoardImpl({ snake, food, status }: BoardProps) {
   const cellPct = 100 / GRID_SIZE;
+
+  // 静态网格底纹,只需计算一次
+  const gridCells = useMemo(() => {
+    return Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, i) => {
+      const x = i % GRID_SIZE;
+      const y = Math.floor(i / GRID_SIZE);
+      const dark = (x + y) % 2 === 0;
+      return (
+        <div
+          key={i}
+          className={dark ? "bg-mint-50/40" : "bg-transparent"}
+        />
+      );
+    });
+  }, []);
 
   return (
     <div
@@ -33,17 +49,7 @@ function BoardImpl({ snake, food, status }: BoardProps) {
           gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`,
         }}
       >
-        {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, i) => {
-          const x = i % GRID_SIZE;
-          const y = Math.floor(i / GRID_SIZE);
-          const dark = (x + y) % 2 === 0;
-          return (
-            <div
-              key={i}
-              className={dark ? "bg-mint-50/40" : "bg-transparent"}
-            />
-          );
-        })}
+        {gridCells}
       </div>
 
       {/* 食物 */}
@@ -115,15 +121,11 @@ function BoardImpl({ snake, food, status }: BoardProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center
                         bg-white/60 backdrop-blur-sm animate-fade-in gap-2">
           <div className="text-2xl font-bold text-slate-700">Game Over</div>
-          <div className="text-sm text-slate-500">按 <KbdInline>空格</KbdInline>{" "}或点击开始按钮再来一局</div>
+          <div className="text-sm text-slate-500">按 <Kbd>空格</Kbd>{" "}或点击开始按钮再来一局</div>
         </div>
       )}
     </div>
   );
-}
-
-function KbdInline({ children }: { children: React.ReactNode }) {
-  return <span className="kbd">{children}</span>;
 }
 
 export const Board = memo(BoardImpl);

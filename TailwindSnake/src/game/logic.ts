@@ -1,13 +1,12 @@
 // 纯函数式贪食蛇单步推进逻辑,便于测试
 
 import {
-  calcLevel,
-  calcSpeed,
   DIRECTION_VECTORS,
   GameState,
+  GRID_SIZE,
   Point,
-  spawnFood,
 } from "./types";
+import { calcLevel, calcSpeed, spawnFood } from "./utils";
 
 /**
  * 单步推进游戏状态。
@@ -26,9 +25,9 @@ export function step(state: GameState): GameState {
   // 撞墙
   if (
     newHead.x < 0 ||
-    newHead.x >= 20 ||
+    newHead.x >= GRID_SIZE ||
     newHead.y < 0 ||
-    newHead.y >= 20
+    newHead.y >= GRID_SIZE
   ) {
     return { ...state, status: "over", direction };
   }

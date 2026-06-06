@@ -1,15 +1,15 @@
-import { GameState } from "../game/types";
-
 interface ScorePanelProps {
-  state: GameState;
+  score: number;
+  highScore: number;
+  level: number;
 }
 
-export function ScorePanel({ state }: ScorePanelProps) {
+export function ScorePanel({ score, highScore, level }: ScorePanelProps) {
   return (
     <div className="grid grid-cols-3 gap-3">
-      <Stat label="分数" value={state.score} highlight />
-      <Stat label="最高" value={state.highScore} />
-      <Stat label="等级" value={state.level} suffix={`Lv`} />
+      <Stat label="分数" value={score} highlight />
+      <Stat label="最高" value={highScore} />
+      <Stat label="等级" value={level} suffix={`Lv`} />
     </div>
   );
 }

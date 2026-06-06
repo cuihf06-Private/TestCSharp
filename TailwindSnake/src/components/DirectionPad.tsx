@@ -23,7 +23,7 @@ export function DirectionPad({ onChange, disabled }: DirectionPadProps) {
       <span />
 
       <PadButton onClick={press("LEFT")} disabled={disabled} label="←" />
-      <PadButton onClick={press("DOWN")} disabled={disabled} label="·" muted />
+      <span />
       <PadButton onClick={press("RIGHT")} disabled={disabled} label="→" />
 
       <span />

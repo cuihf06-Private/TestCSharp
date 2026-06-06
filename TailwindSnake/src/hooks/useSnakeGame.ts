@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createInitialState, step } from "../game/logic";
-import { Direction, GameState, isOpposite } from "../game/types";
+import { Direction, GameState } from "../game/types";
+import { isOpposite } from "../game/utils";
 
 const HIGH_SCORE_KEY = "tailwind-snake:high-score";
 

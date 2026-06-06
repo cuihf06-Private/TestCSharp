@@ -4,6 +4,7 @@ import { useSnakeGame } from "./hooks/useSnakeGame";
 import { Board } from "./components/Board";
 import { ScorePanel } from "./components/ScorePanel";
 import { DirectionPad } from "./components/DirectionPad";
+import { Kbd } from "./components/Kbd";
 
 function App() {
   const { state, start, togglePause, reset, changeDirection } = useSnakeGame();
@@ -76,7 +77,7 @@ function App() {
         </header>
 
         {/* 分数面板 */}
-        <ScorePanel state={state} />
+        <ScorePanel score={state.score} highScore={state.highScore} level={state.level} />
 
         {/* 棋盘 */}
         <Board
@@ -127,10 +128,6 @@ function App() {
       </div>
     </div>
   );
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return <span className="kbd">{children}</span>;
 }
 
 function PlayIcon() {

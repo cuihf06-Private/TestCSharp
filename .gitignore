@@ -47,6 +47,8 @@
 **/check*.log
 **/tauri-dev.log
 **/tauri-build.log
+**/bs-stdout.txt
+**/bs-stderr.txt
 
 # === IDE / 编辑器 ===
 **/.vscode/*
