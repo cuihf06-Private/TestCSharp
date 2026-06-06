@@ -1,6 +1,6 @@
 // 贪食蛇工具函数
 
-import { Direction, GRID_SIZE, Point } from "./types";
+import { Direction, Point } from "./types";
 
 /** 方向是否互为反向(不能 180° 调头) */
 export function isOpposite(a: Direction, b: Direction): boolean {
@@ -13,11 +13,11 @@ export function isOpposite(a: Direction, b: Direction): boolean {
 }
 
 /** 随机生成一个不与蛇身重叠的坐标 */
-export function spawnFood(snake: Point[]): Point {
+export function spawnFood(snake: Point[], gridSize: number): Point {
   const occupied = new Set(snake.map((p) => `${p.x},${p.y}`));
   const free: Point[] = [];
-  for (let y = 0; y < GRID_SIZE; y++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
       const key = `${x},${y}`;
       if (!occupied.has(key)) free.push({ x, y });
     }

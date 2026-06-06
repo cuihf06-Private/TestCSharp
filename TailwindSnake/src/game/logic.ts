@@ -3,7 +3,6 @@
 import {
   DIRECTION_VECTORS,
   GameState,
-  GRID_SIZE,
   Point,
 } from "./types";
 import { calcLevel, calcSpeed, spawnFood } from "./utils";
@@ -12,7 +11,7 @@ import { calcLevel, calcSpeed, spawnFood } from "./utils";
  * 单步推进游戏状态。
  * 返回新的状态对象(不可变更新),以及是否触发游戏结束。
  */
-export function step(state: GameState): GameState {
+export function step(state: GameState, gridSize: number): GameState {
   if (state.status !== "running") return state;
 
   // 应用缓冲方向
@@ -25,9 +24,9 @@ export function step(state: GameState): GameState {
   // 撞墙
   if (
     newHead.x < 0 ||
-    newHead.x >= GRID_SIZE ||
+    newHead.x >= gridSize ||
     newHead.y < 0 ||
-    newHead.y >= GRID_SIZE
+    newHead.y >= gridSize
   ) {
     return { ...state, status: "over", direction };
   }
@@ -47,7 +46,7 @@ export function step(state: GameState): GameState {
     // 吃到食物:不删尾巴
     newSnake = [newHead, ...state.snake];
     newScore += 10;
-    newFood = spawnFood(newSnake);
+    newFood = spawnFood(newSnake, gridSize);
     if (newFood.x === -1) {
       // 通关
       return {
@@ -79,20 +78,21 @@ export function step(state: GameState): GameState {
 }
 
 /** 初始蛇身,横向 3 节,放在棋盘中央 */
-export function createInitialSnake(): Point[] {
-  const cy = 10;
+export function createInitialSnake(gridSize: number): Point[] {
+  const cy = Math.floor(gridSize / 2);
+  const cx = Math.floor(gridSize / 2);
   return [
-    { x: 10, y: cy },
-    { x: 9, y: cy },
-    { x: 8, y: cy },
+    { x: cx, y: cy },
+    { x: cx - 1, y: cy },
+    { x: cx - 2, y: cy },
   ];
 }
 
-export function createInitialState(highScore = 0): GameState {
-  const snake = createInitialSnake();
+export function createInitialState(gridSize: number, highScore = 0): GameState {
+  const snake = createInitialSnake(gridSize);
   return {
     snake,
-    food: spawnFood(snake),
+    food: spawnFood(snake, gridSize),
     direction: "RIGHT",
     nextDirection: "RIGHT",
     score: 0,
