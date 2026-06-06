@@ -33,12 +33,12 @@ function Stat({
         "card px-3 py-2 text-center " + (highlight ? "ring-1 ring-mint-200" : "")
       }
     >
-      <div className="text-[11px] uppercase tracking-widest text-slate-400">
+      <div className="text-[11px] sm:text-xs uppercase tracking-widest text-slate-400">
         {label}
       </div>
       <div
         className={
-          "mt-1 text-2xl font-bold tabular-nums " +
+          "mt-0.5 text-xl sm:text-2xl font-bold tabular-nums " +
           (highlight ? "text-mint-600" : "text-slate-700")
         }
       >
