@@ -14,9 +14,9 @@ function App() {
   const isIdle = state.status === "idle";
 
   return (
-    <div className="h-full w-full flex items-center justify-center p-5 gap-5">
-      {/* 左侧：信息面板（响应式宽度） */}
-      <div className="w-56 sm:w-64 md:w-72 lg:w-80 flex-shrink-0 flex flex-col gap-3 justify-center animate-slide-in">
+    <div className="min-h-screen min-w-[960px] grid grid-cols-[clamp(280px,22vw,360px)_minmax(520px,1fr)] gap-x-[clamp(24px,5vw,96px)] px-[clamp(24px,4vw,72px)] py-10">
+      {/* 左侧：信息面板（固定宽度，不被压缩） */}
+      <div className="self-center flex flex-col gap-3 animate-slide-in">
         {/* 标题区 */}
         <header className="flex items-center gap-2.5">
           <div
@@ -118,16 +118,16 @@ function App() {
         </div>
       </div>
 
-      {/* 右侧：游戏棋盘（以高度为约束的方形） */}
-      <div className="flex-1 min-w-0 h-full flex items-center justify-center">
-        <div className="h-full max-h-full aspect-square">
+      {/* 右侧：游戏棋盘（有最大尺寸限制的正方形） */}
+      <main className="min-w-0 grid place-items-center">
+        <div className="w-[min(70vh,100%,760px)] aspect-square">
           <Board
             snake={state.snake}
             food={state.food}
             status={state.status}
           />
         </div>
-      </div>
+      </main>
     </div>
   );
 }
