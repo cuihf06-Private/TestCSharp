@@ -41,7 +41,7 @@ function App() {
         />
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-[clamp(280px,22vw,360px)_minmax(520px,1fr)] gap-x-[clamp(24px,5vw,96px)] px-[clamp(24px,4vw,72px)] py-4">
+      <div className="flex-1 min-h-0 grid grid-cols-[clamp(280px,22vw,360px)_minmax(520px,1fr)] grid-rows-1 gap-x-[clamp(24px,5vw,96px)] px-[clamp(24px,4vw,72px)] py-4">
         {/* 左侧：信息面板（固定宽度，不被压缩） */}
         <div className="self-center flex flex-col gap-3 animate-slide-in">
           {/* 标题区 */}
